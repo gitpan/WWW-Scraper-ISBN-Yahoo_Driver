@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA);
-$VERSION = '0.03';
+$VERSION = '0.04';
 
 #--------------------------------------------------------------------------
 
@@ -26,6 +26,7 @@ Searches for book information from the Yahoo Books online catalog.
 #   0.01	10/04/2004	Initial Release
 #	0.02	19/04/2004	Test::More added as a prerequisites for PPMs
 #   0.03	31/08/2004	Simplified error handling
+#   0.04	07/01/2001  handler() moved to WWW::Scraper::ISBN::Driver
 ###########################################################################
 
 #--------------------------------------------------------------------------
@@ -43,7 +44,7 @@ use Template::Extract;
 ###########################################################################
 
 use constant	YAHOO	=> 'http://books.yahoo.com';
-use constant	SEARCH	=> 'http://search.shopping.yahoo.com/search?did=56&p=';
+use constant	SEARCH	=> 'http://search.shopping.yahoo.com/search?p=';
 
 #--------------------------------------------------------------------------
 
@@ -91,19 +92,38 @@ sub search {
 	$self->found(0);
 	$self->book(undef);
 
-	my $mechanize = WWW::Mechanize->new();
-	$mechanize->get( SEARCH . $isbn );
+	my $extract = Template::Extract->new;
+	my $mechanize = WWW::Mechanize->new;
+	$mechanize->agent_alias( 'Windows Mozilla' );
+
+	$mechanize->get( YAHOO );
+	return undef	unless($mechanize->success());
+
+	# Yahoo now has a encoded search form on the front page.
+
+	my $template = <<HERE;
+<form name="search" onSubmit="return submitForm(this, '56');"
+ action="[% action %]">[% ... %]
+HERE
+
+    my $data = $extract->extract($template, $mechanize->content());
+	return undef	unless(defined $data);
+	
+	my $search = "http://shopping.yahoo.com$data->{action}?f=&mid=&dept_id=56&p=$isbn&did=56";
+	$mechanize->get( $search );
 	return undef	unless($mechanize->success());
 
 	# The Results page
-	my $template = <<END;
-<td align=center width=70><a href="http://shopping.yahoo.com/[% code %]"><img src="http://us.f[% ... %]
-END
+	$template = <<HERE;
+<!-- ITEM -->
+<table class="item_table" cellspacing="0" cellpadding="0">
+  <tr>
+    <td class="img">
+<a href="http://shopping.yahoo.com/[% code %]"><img src="http://us.f[% ... %]
+HERE
 
-	my $extract = Template::Extract->new;
-    my $data = $extract->extract($template, $mechanize->content());
-
-	return $self->_error_handler("Could not extract data from Yahoo Books result page.")
+    $data = $extract->extract($template, $mechanize->content());
+	return $self->handler("Could not extract data from Yahoo Books result page.")
 		unless(defined $data);
 
 	my $code = 'http://shopping.yahoo.com/' . $data->{code};
@@ -122,7 +142,7 @@ END
 END
 	$data = $extract->extract($template, $mechanize->content());
 
-	return $self->_error_handler("Could not extract data from Yahoo Books result page.")
+	return $self->handler("Could not extract data from Yahoo Books result page.")
 		unless(defined $data);
 
 	$data->{author} =~ s!</?a[^>]*>!!g;	# remove anchor tags
@@ -140,15 +160,6 @@ END
 	$self->book($bk);
 	$self->found(1);
 	return $self->book;
-}
-
-sub _error_handler {
-	my $self = shift;
-	my $mess = shift;
-	print "Error: $mess\n"	if $self->verbosity;
-	$self->error("$mess\n");
-	$self->found(0);
-	return 0;
 }
 
 1;
@@ -187,7 +198,7 @@ Requires the following modules be installed:
 
 =head1 COPYRIGHT
 
-  Copyright (C) 2002-2004 Barbie for Miss Barbell Productions
+  Copyright (C) 2004-2005 Barbie for Miss Barbell Productions
   All Rights Reserved.
 
   This module is free software; you can redistribute it and/or 

@@ -6,9 +6,9 @@ WriteMakefile(
     'VERSION_FROM'	=> 'lib/WWW/Scraper/ISBN/Yahoo_Driver.pm',
     'PREREQ_PM'		=> {
 
-		WWW::Scraper::ISBN			=> 0.23,
-		WWW::Scraper::ISBN::Driver	=> 0.16,
-		WWW::Mechanize				=> 0,
+		WWW::Scraper::ISBN			=> 0.25,
+		WWW::Scraper::ISBN::Driver	=> 0.18,
+		WWW::Mechanize				=> 0.56,	# when agent_alias() got added
 		Template::Extract			=> 0,
 		Test::More					=> 0.45,	# for testing
 
