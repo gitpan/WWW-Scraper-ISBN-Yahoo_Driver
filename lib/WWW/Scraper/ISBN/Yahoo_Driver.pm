@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA);
-$VERSION = '0.02';
+$VERSION = '0.03';
 
 #--------------------------------------------------------------------------
 
@@ -25,6 +25,7 @@ Searches for book information from the Yahoo Books online catalog.
 ### CHANGES ###############################################################
 #   0.01	10/04/2004	Initial Release
 #	0.02	19/04/2004	Test::More added as a prerequisites for PPMs
+#   0.03	31/08/2004	Simplified error handling
 ###########################################################################
 
 #--------------------------------------------------------------------------
@@ -96,18 +97,14 @@ sub search {
 
 	# The Results page
 	my $template = <<END;
-<table cellpadding=5 cellspacing=0 border=0 width=100%><tr valign=top><td align=center width=70><a href="http://shopping.yahoo.com/[% code %]"><img src="http://us.f1.yahoofs.com/[% ... %]
+<td align=center width=70><a href="http://shopping.yahoo.com/[% code %]"><img src="http://us.f[% ... %]
 END
 
 	my $extract = Template::Extract->new;
     my $data = $extract->extract($template, $mechanize->content());
 
-	unless(defined $data) {
-		print "Error extracting data from Yahoo Books result page.\n"	if $self->verbosity;
-		$self->error("Could not extract data from Yahoo Books result page.\n");
-		$self->found(0);
-		return 0;
-	}
+	return $self->_error_handler("Could not extract data from Yahoo Books result page.")
+		unless(defined $data);
 
 	my $code = 'http://shopping.yahoo.com/' . $data->{code};
 	$mechanize->get( $code );
@@ -125,12 +122,8 @@ END
 END
 	$data = $extract->extract($template, $mechanize->content());
 
-	unless(defined $data) {
-		print "Error extracting data from Yahoo Books result page.\n"	if $self->verbosity;
-		$self->error("Could not extract data from Yahoo Books result page.\n");
-		$self->found(0);
-		return 0;
-	}
+	return $self->_error_handler("Could not extract data from Yahoo Books result page.")
+		unless(defined $data);
 
 	$data->{author} =~ s!</?a[^>]*>!!g;	# remove anchor tags
 
@@ -147,6 +140,15 @@ END
 	$self->book($bk);
 	$self->found(1);
 	return $self->book;
+}
+
+sub _error_handler {
+	my $self = shift;
+	my $mess = shift;
+	print "Error: $mess\n"	if $self->verbosity;
+	$self->error("$mess\n");
+	$self->found(0);
+	return 0;
 }
 
 1;
