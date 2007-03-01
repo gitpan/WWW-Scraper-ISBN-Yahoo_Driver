@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA);
-$VERSION = '0.04';
+$VERSION = '0.05';
 
 #--------------------------------------------------------------------------
 
@@ -21,13 +21,6 @@ See parent class documentation (L<WWW::Scraper::ISBN::Driver>)
 Searches for book information from the Yahoo Books online catalog.
 
 =cut
-
-### CHANGES ###############################################################
-#   0.01	10/04/2004	Initial Release
-#	0.02	19/04/2004	Test::More added as a prerequisites for PPMs
-#   0.03	31/08/2004	Simplified error handling
-#   0.04	07/01/2001  handler() moved to WWW::Scraper::ISBN::Driver
-###########################################################################
 
 #--------------------------------------------------------------------------
 
@@ -97,47 +90,39 @@ sub search {
 	$mechanize->agent_alias( 'Windows Mozilla' );
 
 	$mechanize->get( YAHOO );
-	return undef	unless($mechanize->success());
+	return  unless($mechanize->success());
 
 	# Yahoo now has a encoded search form on the front page.
 
 	my $template = <<HERE;
-<form name="search" onSubmit="return submitForm(this, '56');"
- action="[% action %]">[% ... %]
+<form name="s"[% ... %]action="[% action %]">[% ... %]
 HERE
 
     my $data = $extract->extract($template, $mechanize->content());
-	return undef	unless(defined $data);
+	return	unless(defined $data);
 	
-	my $search = "http://shopping.yahoo.com$data->{action}?f=&mid=&dept_id=56&p=$isbn&did=56";
+	my $search = "$data->{action}?p=$isbn&did=56;f=isbn;mid=1";
 	$mechanize->get( $search );
-	return undef	unless($mechanize->success());
+	return	unless($mechanize->success());
 
 	# The Results page
-	$template = <<HERE;
-<!-- ITEM -->
-<table class="item_table" cellspacing="0" cellpadding="0">
-  <tr>
-    <td class="img">
-<a href="http://shopping.yahoo.com/[% code %]"><img src="http://us.f[% ... %]
-HERE
-
-    $data = $extract->extract($template, $mechanize->content());
+    my $content = $mechanize->content();
+#print STDERR "\n# content1=[".$mechanize->content()."]\n";
+    my ($code) = $content =~ /href="(http[^"]+:isbn=$isbn;[^"]+)"/is;
+#print STDERR "\n# code=[$code]\n";
 	return $self->handler("Could not extract data from Yahoo Books result page.")
-		unless(defined $data);
+		unless(defined $code);
 
-	my $code = 'http://shopping.yahoo.com/' . $data->{code};
 	$mechanize->get( $code );
-	return undef	unless($mechanize->success());
+	return	unless($mechanize->success());
+
+#print STDERR "\n# content2=[".$mechanize->content()."]\n";
 
 	# The Book page
 	$template = <<END;
-<h1 class=yshp_product_page><b>[% title %]</b></h1>[% ... %]
-<h2 class=yshp_product_page><b>[% author %]</b></h2><br></td>[% ... %]
-<b>Compare Prices</b>[% ... %]
-<tr valign=top>
-<td width=150 align=center>
-<a href="[% ... %]" onclick="window.open([% ... %]); return false;"><img src="[% image_link %]" width="[% ... %]" height="[% ... %]" alt="[% ... %]" border=0></a>[% ... %]
+<h1>[% title %]</h1>[% ... %]
+<h2 class=yshp_product_page><b><a[% ... %]>[% author %]</a></b></h2>[% ... %]
+<div class="viewlrg"><a href="[% ... %]" onclick="window.open('[% image_link %]'[% ... %]); return false;"><img src="[% thumb_link %]"[% ... %]
 <b>Publisher:</b></span> [% publisher %] ([% pubdate %])<br><span class=[% ... %]><b>ISBN:</b></span> [% isbn %]<br>[% ... %]
 END
 	$data = $extract->extract($template, $mechanize->content());
@@ -153,7 +138,7 @@ END
 		'title'			=> $data->{title},
 		'book_link'		=> $code,
 		'image_link'	=> $data->{image_link},
-		'thumb_link'	=> $data->{image_link},
+		'thumb_link'	=> $data->{thumb_link},
 		'publisher'		=> $data->{publisher},
 		'pubdate'		=> $data->{pubdate},
 	};
@@ -193,16 +178,19 @@ Requires the following modules be installed:
 
 =head1 AUTHOR
 
-  Barbie, E<lt>barbie@cpan.orgE<gt>
-  Miss Barbell Productions, L<http://www.missbarbell.co.uk/>
+  Barbie, <barbie@cpan.org>
+  Miss Barbell Productions, <http://www.missbarbell.co.uk/>
 
-=head1 COPYRIGHT
+=head1 COPYRIGHT & LICENSE
 
-  Copyright (C) 2004-2005 Barbie for Miss Barbell Productions
+  Copyright (C) 2004-2007 Barbie for Miss Barbell Productions
   All Rights Reserved.
 
   This module is free software; you can redistribute it and/or 
   modify it under the same terms as Perl itself.
 
-=cut
+The full text of the licenses can be found in the F<Artistic> file included 
+with this module, or in L<perlartistic> as part of Perl installation, in 
+the 5.8.1 release or later.
 
+=cut
