@@ -2,7 +2,7 @@
 use strict;
 
 use lib './t';
-use Test::More tests => 21;
+use Test::More tests => 23;
 
 ###########################################################
 
@@ -22,6 +22,7 @@ use Test::More tests => 21;
 
 		my $book = $record->book;
 		is($book->{'isbn'},$isbn);
+		is($book->{'isbn13'},'9780385504201');
 		is($book->{'title'},'The Da Vinci Code');
 		is($book->{'author'},'Dan Brown');
 		is($book->{'pubdate'},'03/01/2003');
@@ -42,6 +43,7 @@ use Test::More tests => 21;
 
 		my $book = $record->book;
 		is($book->{'isbn'},$isbn);
+		is($book->{'isbn13'},undef);
 		is($book->{'title'},q|Perl Developer's Dictionary|);
 		is($book->{'author'},'Clinton Pierce');
 		is($book->{'pubdate'},'07/01/2001');

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA);
-$VERSION = '0.05';
+$VERSION = '0.06';
 
 #--------------------------------------------------------------------------
 
@@ -65,6 +65,7 @@ function returns zero and allows the next driver in the chain to have a go. If
 a valid page is returned, the following fields are returned via the book hash:
 
   isbn
+  isbn13 (if available)
   title
   author
   pubdate
@@ -90,7 +91,8 @@ sub search {
 	$mechanize->agent_alias( 'Windows Mozilla' );
 
 	$mechanize->get( YAHOO );
-	return  unless($mechanize->success());
+    return $self->handler("Yahoo! book website appears to be unavailable.")
+	    unless($mechanize->success());
 
 	# Yahoo now has a encoded search form on the front page.
 
@@ -99,41 +101,53 @@ sub search {
 HERE
 
     my $data = $extract->extract($template, $mechanize->content());
-	return	unless(defined $data);
-	
 	my $search = "$data->{action}?p=$isbn&did=56;f=isbn;mid=1";
 	$mechanize->get( $search );
-	return	unless($mechanize->success());
+	return $self->handler("Failed to find that book on Yahoo! book website.")
+	    unless($mechanize->success());
 
 	# The Results page
     my $content = $mechanize->content();
-#print STDERR "\n# content1=[".$mechanize->content()."]\n";
+#print STDERR "\n# content1=[\n$content\n]\n";
     my ($code) = $content =~ /href="(http[^"]+:isbn=$isbn;[^"]+)"/is;
 #print STDERR "\n# code=[$code]\n";
-	return $self->handler("Could not extract data from Yahoo Books result page.")
+	return $self->handler("Could not extract data from Yahoo! Books result page.")
 		unless(defined $code);
 
 	$mechanize->get( $code );
 	return	unless($mechanize->success());
+    my $html = $mechanize->content();
 
-#print STDERR "\n# content2=[".$mechanize->content()."]\n";
+#print STDERR "\n# content2=[\n$html\n]\n";
 
 	# The Book page
-	$template = <<END;
+	my $template1 = <<END;
 <h1>[% title %]</h1>[% ... %]
 <h2 class=yshp_product_page><b><a[% ... %]>[% author %]</a></b></h2>[% ... %]
 <div class="viewlrg"><a href="[% ... %]" onclick="window.open('[% image_link %]'[% ... %]); return false;"><img src="[% thumb_link %]"[% ... %]
-<b>Publisher:</b></span> [% publisher %] ([% pubdate %])<br><span class=[% ... %]><b>ISBN:</b></span> [% isbn %]<br>[% ... %]
+<b>Publisher:</b></span> [% publisher %] ([% pubdate %])<br><span[% ... %]
+><b>ISBN:</b></span> [% isbn %]</span>[% ... %]<b>ISBN13:</b></span> [% isbn13 %]</span>[% ... %]
 END
-	$data = $extract->extract($template, $mechanize->content());
 
-	return $self->handler("Could not extract data from Yahoo Books result page.")
+    my $template2 = <<END;
+<h1>[% title %]</h1>[% ... %]
+<h2 class=yshp_product_page><b><a[% ... %]>[% author %]</a></b></h2>[% ... %]
+<div class="viewlrg"><a href="[% ... %]" onclick="window.open('[% image_link %]'[% ... %]); return false;"><img src="[% thumb_link %]"[% ... %]
+<b>Publisher:</b></span> [% publisher %] ([% pubdate %])<br><span[% ... %]
+><b>ISBN:</b></span> [% isbn %]</span>[% ... %]
+END
+
+    $template = ($html =~ /ISBN13:/s) ? $template1 : $template2;
+	$data = $extract->extract($template, $html);
+
+	return $self->handler("Could not extract data from Yahoo! Books book page.")
 		unless(defined $data);
 
 	$data->{author} =~ s!</?a[^>]*>!!g;	# remove anchor tags
 
 	my $bk = {
 		'isbn'			=> $data->{isbn},
+		'isbn13'		=> $data->{isbn13},
 		'author'		=> $data->{author},
 		'title'			=> $data->{title},
 		'book_link'		=> $code,
@@ -154,27 +168,15 @@ __END__
 
 Requires the following modules be installed:
 
-=over 4
-
-=item L<WWW::Scraper::ISBN::Driver>
-
-=item L<WWW::Mechanize>
-
-=item L<Template::Extract>
-
-=back
+L<WWW::Scraper::ISBN::Driver>,
+L<WWW::Mechanize>,
+L<Template::Extract>
 
 =head1 SEE ALSO
 
-=over 4
-
-=item L<WWW::Scraper::ISBN>
-
-=item L<WWW::Scraper::ISBN::Record>
-
-=item L<WWW::Scraper::ISBN::Driver>
-
-=back
+L<WWW::Scraper::ISBN>,
+L<WWW::Scraper::ISBN::Record>,
+L<WWW::Scraper::ISBN::Driver>
 
 =head1 AUTHOR
 
@@ -184,7 +186,6 @@ Requires the following modules be installed:
 =head1 COPYRIGHT & LICENSE
 
   Copyright (C) 2004-2007 Barbie for Miss Barbell Productions
-  All Rights Reserved.
 
   This module is free software; you can redistribute it and/or 
   modify it under the same terms as Perl itself.
