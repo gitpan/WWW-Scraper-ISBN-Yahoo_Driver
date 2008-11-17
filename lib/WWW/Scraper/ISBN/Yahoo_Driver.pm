@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA);
-$VERSION = '0.07';
+$VERSION = '0.08';
 
 #--------------------------------------------------------------------------
 
@@ -124,19 +124,22 @@ sub search {
 
     # The Book page
     my $template1 = <<END;
-<h1>[% title %]</h1>[% ... %]
-<h2 class=yshp_product_page><b><a[% ... %]>[% author %]</a></b></h2>[% ... %]
-<div class="viewlrg"><a href="[% ... %]" onclick="window.open('[% image_link %]'[% ... %]); return false;"><img src="[% thumb_link %]"[% ... %]
-<b>Publisher:</b></span> [% publisher %] ([% pubdate %])<br><span[% ... %]
-><b>ISBN:</b></span> [% isbn %]</span>[% ... %]<b>ISBN13:</b></span> [% isbn13 %]</span>[% ... %]
+<div id="bd">[% ... %]<div class="pad">[% ... %]
+<a href="[% image_link %]" onclick="[% ... %]" rel="nofollow"><img id="shimgproductmain" src="[% thumb_link %]"[% ... %] /><span[% ... %]
+<h2>Product Details: <em>[% title %]</em></h2>[% ... %]
+<em>Author:</em></td><td><a href="[% ... %]" rel="nofollow" target="_blank">[% author %]</a>[% ... %]
+<em>Publisher:</em></td><td>[% publisher %] ([% pubdate %])</td>[% ... %]
+<em>ISBN:</em></td><td>[% isbn %]</td>[% ... %]
+<em>ISBN13:</em></td><td>[% isbn13 %]</td>[% ... %]
 END
 
     my $template2 = <<END;
-<h1>[% title %]</h1>[% ... %]
-<h2 class=yshp_product_page><b><a[% ... %]>[% author %]</a></b></h2>[% ... %]
-<div class="viewlrg"><a href="[% ... %]" onclick="window.open('[% image_link %]'[% ... %]); return false;"><img src="[% thumb_link %]"[% ... %]
-<b>Publisher:</b></span> [% publisher %] ([% pubdate %])<br><span[% ... %]
-><b>ISBN:</b></span> [% isbn %]</span>[% ... %]
+<div id="bd">[% ... %]<div class="pad">[% ... %]
+<a href="[% image_link %]" onclick="[% ... %]" rel="nofollow"><img id="shimgproductmain" src="[% thumb_link %]"[% ... %] /><span[% ... %]
+<h2>Product Details: <em>[% title %]</em></h2>[% ... %]
+<em>Author:</em></td><td><a href="[% ... %]" rel="nofollow" target="_blank">[% author %]</a>[% ... %]
+<em>Publisher:</em></td><td>[% publisher %] ([% pubdate %])</td>[% ... %]
+<em>ISBN:</em></td><td>[% isbn %]</td>[% ... %]
 END
 
     $template = ($html =~ /ISBN13:/s) ? $template1 : $template2;
@@ -146,6 +149,11 @@ END
         unless(defined $data);
 
     $data->{author} =~ s!</?a[^>]*>!!g; # remove anchor tags
+
+    my $root = $mechanize->uri();
+    $root =~ s!(https?://([^/]+)).*!$1!;
+    $data->{image_link} = $root . $data->{image_link}   if($data->{image_link} !~ /^http/);
+    $data->{thumb_link} = $root . $data->{thumb_link}   if($data->{thumb_link} !~ /^http/);
 
     my $bk = {
         'isbn13'        => $data->{isbn13},

@@ -55,7 +55,7 @@ use Test::More tests => 23;
 		is($book->{'author'},'Clinton Pierce');
 		is($book->{'pubdate'},'07/01/2001');
 		is($book->{'publisher'},q!Sams!);
-		like($book->{'image_link'},qr!0672320673!);
+		like($book->{'image_link'},qr!pid=\d+!);
 		like($book->{'thumb_link'},qr!0672320673!);
 		like($book->{'book_link'},qr!Perl\%20Developer!);
 	}

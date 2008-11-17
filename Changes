@@ -1,5 +1,8 @@
 Revision history for Perl extension WWW::Scraper::ISBN::Yahoo_Driver.
 
+0.08	17/11/2008
+	- updated pattern recognition due to page layout changing
+
 0.07	27/06/2008
 	- added checks to only run extra tests under AUTOMATED_TESTING
 	- switched metatest to use Test-CPAN-Meta
