@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA);
-$VERSION = '0.08';
+$VERSION = '0.09';
 
 #--------------------------------------------------------------------------
 
@@ -87,45 +87,44 @@ sub search {
     $self->book(undef);
 
     my $extract = Template::Extract->new;
-    my $mechanize = WWW::Mechanize->new;
-    $mechanize->agent_alias( 'Windows Mozilla' );
+    my $mech = WWW::Mechanize->new;
+    $mech->agent_alias( 'Linux Mozilla' );
 
-    $mechanize->get( YAHOO );
+    $mech->get( YAHOO );
     return $self->handler("Yahoo! book website appears to be unavailable.")
-        unless($mechanize->success());
+        unless($mech->success());
 
     # Yahoo now has a encoded search form on the front page.
 #    my $template = <<HERE;
 #<form name="s"[% ... %]action="[% action %]">[% ... %]
 #HERE
-#    my $data = $extract->extract($template, $mechanize->content());
+#    my $data = $extract->extract($template, $mech->content());
 #    my $search = "$data->{action}?p=$isbn&did=56;f=isbn;mid=1";
 
     my ($template,$data);
     my $search = SEARCH . $isbn;
 
-    $mechanize->get( $search );
+    $mech->get( $search );
     return $self->handler("Failed to find that book on Yahoo! book website.")
-        unless($mechanize->success());
+        unless($mech->success());
 
     # The Results page
-    my $content = $mechanize->content();
+    my $content = $mech->content();
 #print STDERR "\n# content1=[\n$content\n]\n";
-    my ($code) = $content =~ /<!-- ITEM -->.*?href="(http[^"]+)"/is;
+    my ($code) = $content =~ /<li class="hproduct first.*?"><div class="img"><a href="(http[^"]+)"/is;
 #print STDERR "\n# code=[$code]\n";
-    return $self->handler("Could not extract data from Yahoo! Books result page.")
+    return $self->handler("Could not extract data from Yahoo! Books result page. [$search]")
         unless(defined $code);
 
-    $mechanize->get( $code );
-    return  unless($mechanize->success());
-    my $html = $mechanize->content();
+    $mech->get( $code );
+    return  unless($mech->success());
+    my $html = $mech->content();
 
 #print STDERR "\n# content2=[\n$html\n]\n";
 
     # The Book page
     my $template1 = <<END;
-<div id="bd">[% ... %]<div class="pad">[% ... %]
-<a href="[% image_link %]" onclick="[% ... %]" rel="nofollow"><img id="shimgproductmain" src="[% thumb_link %]"[% ... %] /><span[% ... %]
+<img id="shimgproductmain"[% ... %]src="[% thumb_link %]"[% ... %]
 <h2>Product Details: <em>[% title %]</em></h2>[% ... %]
 <em>Author:</em></td><td><a href="[% ... %]" rel="nofollow" target="_blank">[% author %]</a>[% ... %]
 <em>Publisher:</em></td><td>[% publisher %] ([% pubdate %])</td>[% ... %]
@@ -134,8 +133,7 @@ sub search {
 END
 
     my $template2 = <<END;
-<div id="bd">[% ... %]<div class="pad">[% ... %]
-<a href="[% image_link %]" onclick="[% ... %]" rel="nofollow"><img id="shimgproductmain" src="[% thumb_link %]"[% ... %] /><span[% ... %]
+<img id="shimgproductmain"[% ... %]src="[% thumb_link %]"[% ... %]
 <h2>Product Details: <em>[% title %]</em></h2>[% ... %]
 <em>Author:</em></td><td><a href="[% ... %]" rel="nofollow" target="_blank">[% author %]</a>[% ... %]
 <em>Publisher:</em></td><td>[% publisher %] ([% pubdate %])</td>[% ... %]
@@ -148,9 +146,10 @@ END
     return $self->handler("Could not extract data from Yahoo! Books book page.")
         unless(defined $data);
 
-    $data->{author} =~ s!</?a[^>]*>!!g; # remove anchor tags
+    $data->{author} =~ s!</?a[^>]*>!!g;         # remove anchor tags
+    $data->{image_link} = $data->{thumb_link};  # no big picture now
 
-    my $root = $mechanize->uri();
+    my $root = $mech->uri();
     $root =~ s!(https?://([^/]+)).*!$1!;
     $data->{image_link} = $root . $data->{image_link}   if($data->{image_link} !~ /^http/);
     $data->{thumb_link} = $root . $data->{thumb_link}   if($data->{thumb_link} !~ /^http/);

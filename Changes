@@ -1,5 +1,11 @@
 Revision history for Perl extension WWW::Scraper::ISBN::Yahoo_Driver.
 
+0.09	15/08/2009
+	- minor fixes to parsing of Yahoo Books website.
+	- added ping tests, to avoid failing when no network connection.
+	- real failures produce diagnostics not skips now.
+	- added more package tests.
+
 0.08	17/11/2008
 	- updated pattern recognition due to page layout changing
 
