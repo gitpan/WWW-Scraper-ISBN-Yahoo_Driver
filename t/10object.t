@@ -11,7 +11,7 @@ my $scraper = WWW::Scraper::ISBN->new();
 isa_ok($scraper,'WWW::Scraper::ISBN');
 
 SKIP: {
-	skip "Can't see a network connection", 21   if(pingtest());
+	skip "Can't see a network connection", 22   if(pingtest());
 
 	$scraper->drivers("Yahoo");
 
