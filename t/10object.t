@@ -2,7 +2,7 @@
 use strict;
 
 use lib './t';
-use Test::More tests => 23;
+use Test::More tests => 37;
 
 ###########################################################
 
@@ -11,7 +11,7 @@ my $scraper = WWW::Scraper::ISBN->new();
 isa_ok($scraper,'WWW::Scraper::ISBN');
 
 SKIP: {
-	skip "Can't see a network connection", 22   if(pingtest());
+	skip "Can't see a network connection", 36   if(pingtest());
 
 	$scraper->drivers("Yahoo");
 
@@ -27,15 +27,22 @@ SKIP: {
 		is($record->found_in,'Yahoo');
 
 		my $book = $record->book;
-		is($book->{'isbn'},$isbn);
-		is($book->{'isbn13'},'9780307474278');
-		is($book->{'title'},'The Da Vinci Code');
-		is($book->{'author'},'Dan Brown');
-		is($book->{'pubdate'},'03/31/2009');
-		is($book->{'publisher'},'Anchor Books');
-		like($book->{'image_link'},qr!$isbn!);
-		like($book->{'thumb_link'},qr!$isbn!);
-		like($book->{'book_link'},qr!The%20Da%20Vinci%20Code!);
+		is($book->{'isbn'},         '9780307474278'         ,'.. isbn found');
+		is($book->{'isbn10'},       $isbn                   ,'.. isbn10 found');
+		is($book->{'isbn13'},       '9780307474278'         ,'.. isbn13 found');
+		is($book->{'ean13'},        '9780307474278'         ,'.. ean13 found');
+		is($book->{'title'},        'The DaVinci Code'      ,'.. title found');
+		is($book->{'author'},       'Dan Brown'             ,'.. author found');
+		is($book->{'pubdate'},      'March 2009'            ,'.. pubdate found');
+		is($book->{'publisher'},    undef                   ,'.. publisher found'); # no longer provided
+		like($book->{'image_link'}, qr!9780307474278!);
+		like($book->{'thumb_link'}, qr!9780307474278!);
+		like($book->{'book_link'},  qr!the-davinci-code!i);
+		is($book->{'binding'},      'Paperback'             ,'.. binding found');
+		is($book->{'pages'},        597                     ,'.. pages found');
+		is($book->{'width'},        undef                   ,'.. width found');
+		is($book->{'height'},       undef                   ,'.. height found');
+		is($book->{'weight'},       undef                   ,'.. weight found');
 
         #use Data::Dumper;
         #diag("book=[".Dumper($book)."]");
@@ -53,15 +60,22 @@ SKIP: {
 		is($record->found_in,'Yahoo');
 
 		my $book = $record->book;
-		is($book->{'isbn'},'0596001738');
-		is($book->{'isbn13'},'9780596001735');
-		is($book->{'title'},q|Perl Best Practices|);
-		is($book->{'author'},'Damian Conway');
-		is($book->{'pubdate'},'08/01/2005');
-		is($book->{'publisher'},q!Oreilly & Associates Inc!);
-		like($book->{'image_link'},qr!0596001738!);
-		like($book->{'thumb_link'},qr!0596001738!);
-		like($book->{'book_link'},qr!Perl\%20Best!);
+		is($book->{'isbn'},         $isbn                   ,'.. isbn found');
+		is($book->{'isbn10'},       undef                   ,'.. isbn10 found');    # not provided by default
+		is($book->{'isbn13'},       '9780596001735'         ,'.. isbn13 found');
+		is($book->{'ean13'},        '9780596001735'         ,'.. ean13 found');
+		is($book->{'title'},        'Perl Best Practices'   ,'.. title found');
+		is($book->{'author'},       'Damian Conway'         ,'.. author found');
+		is($book->{'pubdate'},      'August 2005'           ,'.. pubdate found');
+		is($book->{'publisher'},    undef                   ,'.. publisher found'); # no longer provided
+		like($book->{'image_link'}, qr!9780596001735!);
+		like($book->{'thumb_link'}, qr!9780596001735!);
+		like($book->{'book_link'},  qr!perl-best-practices!i);
+		is($book->{'binding'},      'Paperback'             ,'.. binding found');
+		is($book->{'pages'},        517                     ,'.. pages found');
+		is($book->{'width'},        undef                   ,'.. width found');
+		is($book->{'height'},       undef                   ,'.. height found');
+		is($book->{'weight'},       undef                   ,'.. weight found');
 
         #use Data::Dumper;
         #diag("book=[".Dumper($book)."]");

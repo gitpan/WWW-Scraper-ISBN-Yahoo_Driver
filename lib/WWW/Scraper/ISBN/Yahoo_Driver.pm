@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA);
-$VERSION = '0.10';
+$VERSION = '0.11';
 
 #--------------------------------------------------------------------------
 
@@ -30,7 +30,6 @@ Searches for book information from the Yahoo Books online catalog.
 
 use WWW::Scraper::ISBN::Driver;
 use WWW::Mechanize;
-use Template::Extract;
 
 ###########################################################################
 #Constants                                                                #
@@ -64,15 +63,22 @@ The returned page should be the correct catalog page for that ISBN. If not the
 function returns zero and allows the next driver in the chain to have a go. If
 a valid page is returned, the following fields are returned via the book hash:
 
-  isbn
-  isbn13 (if available)
+  isbn          (now returns isbn13)
+  isbn10        (no longer provided by Yahoo on page)
+  isbn13
+  ean13
   title
   author
-  pubdate
-  publisher
+  pubdate       (no longer provided by Yahoo on page)
+  publisher     (no longer provided by Yahoo on page)
   book_link
   image_link
-  thumb_link (same as image_link)
+  thumb_link    (same as image_link)
+  binding       (if known)
+  pages         (if known)
+  weight        (if known) (in grammes)
+  width         (if known) (in millimetres)
+  height        (if known) (in millimetres)
 
 The book_link and image_link refer back to the Yahoo Books website.
 
@@ -85,8 +91,8 @@ sub search {
     my $isbn = shift;
     $self->found(0);
     $self->book(undef);
+    my $data = {};
 
-    my $extract = Template::Extract->new;
     my $mech = WWW::Mechanize->new;
     $mech->agent_alias( 'Linux Mozilla' );
 
@@ -94,14 +100,6 @@ sub search {
     return $self->handler("Yahoo! book website appears to be unavailable.")
         unless($mech->success());
 
-    # Yahoo now has a encoded search form on the front page.
-#    my $template = <<HERE;
-#<form name="s"[% ... %]action="[% action %]">[% ... %]
-#HERE
-#    my $data = $extract->extract($template, $mech->content());
-#    my $search = "$data->{action}?p=$isbn&did=56;f=isbn;mid=1";
-
-    my ($template,$data);
     my $search = SEARCH . $isbn;
 
     $mech->get( $search );
@@ -110,68 +108,63 @@ sub search {
 
     # The Results page
     my $content = $mech->content();
-#print STDERR "\n# content1=[\n$content\n]\n";
-    my ($code) = $content =~ /<li class="hproduct first.*?"><div class="img"><a href="(http[^"]+)"/is;
-#print STDERR "\n# code=[$code]\n";
+    #print STDERR "\n# content1=[\n$content\n]\n";
+    ($data->{book_link},$data->{title},$data->{binding},$data->{author},$data->{pubdate}) 
+                                        = $content =~ m!<h2 class="title"><a href="([^"]+)">([^<]+) <em>\((\w+)\)</em></a></h2>Author: ([^<]+)<br/>Published: ([^<]+)<br/>!is;
     return $self->handler("Could not extract data from Yahoo! Books result page. [$search]")
-        unless(defined $code);
+        unless(defined $data->{book_link});
 
-    $mech->get( $code );
-    return  unless($mech->success());
+    my $uri = $mech->uri();
+    $uri =~ s!^(https?://[^/]+).*!$1!;
+    my $link = $uri . $data->{book_link};
+
+    $mech->get( $link );
+    return $self->handler("Could not extract data from Yahoo! Books book page. [$link]")
+        unless($mech->success());
+
+
+	# The Book page
     my $html = $mech->content();
 
-#print STDERR "\n# content2=[\n$html\n]\n";
+    #print STDERR "\n#$html";
 
-    # The Book page
-    my $template1 = <<END;
-<img id="shimgproductmain"[% ... %]src="[% thumb_link %]"[% ... %]
-<h2>Product Details: <em>[% title %]</em></h2>[% ... %]
-<em>Author:</em></td><td><a href="[% ... %]" rel="nofollow" target="_blank">[% author %]</a>[% ... %]
-<em>Publisher:</em></td><td>[% publisher %] ([% pubdate %])</td>[% ... %]
-<em>ISBN:</em></td><td>[% isbn %]</td>[% ... %]
-<em>ISBN13:</em></td><td>[% isbn13 %]</td>[% ... %]
-END
-
-    my $template2 = <<END;
-<img id="shimgproductmain"[% ... %]src="[% thumb_link %]"[% ... %]
-<h2>Product Details: <em>[% title %]</em></h2>[% ... %]
-<em>Author:</em></td><td><a href="[% ... %]" rel="nofollow" target="_blank">[% author %]</a>[% ... %]
-<em>Publisher:</em></td><td>[% publisher %] ([% pubdate %])</td>[% ... %]
-<em>ISBN:</em></td><td>[% isbn %]</td>[% ... %]
-END
-
-    $template = ($html =~ /ISBN13:/s) ? $template1 : $template2;
-    $data = $extract->extract($template, $html);
-
-    return $self->handler("Could not extract data from Yahoo! Books book page.")
-        unless(defined $data);
-
-    $data->{author} =~ s!</?a[^>]*>!!g;         # remove anchor tags
-    $data->{image_link} = $data->{thumb_link};  # no big picture now
-
-    my $root = $mech->uri();
-    $root =~ s!(https?://([^/]+)).*!$1!;
-    $data->{image_link} = $root . $data->{image_link}   if($data->{image_link} !~ /^http/);
-    $data->{thumb_link} = $root . $data->{thumb_link}   if($data->{thumb_link} !~ /^http/);
+    ($data->{pages})                    = $html =~ m!<em>Number of Pages</em></td><td>(\d+)</td>!s;
+    ($data->{weight})                   = $html =~ m!<li><b>Shipping Weight:</b>\s*([\d.]+)\s*ounces</li>!s;
+    ($data->{height},$data->{width})    = $html =~ m!<li><b>\s*Product Dimensions:\s*</b>\s*([\d.]+) x ([\d.]+) x ([\d.]+) inches\s*</li>!s;
+    ($data->{isbn13})                   = $html =~ m!http://shopping.yahoo.com/(97[89]\d+)!s;
+    ($data->{isbn10})                   = $isbn if(length($isbn) == 10);
+    ($data->{publisher})                = (undef);
+    ($data->{image_link})               = $html =~ m!<img id="shimgproductmain".*?src="([^"]+)"!s;
+    ($data->{title},$data->{author},$data->{binding})    
+                                        = $html =~ m!<h1><strong class="title"><span property="dc:title">(.*) - ([^<]+)</span></strong> <em>\((\w+)\)</em></h1>!;
 
     my $bk = {
         'isbn13'        => $data->{isbn13},
-        'isbn10'        => $data->{isbn},
-        'isbn'          => $data->{isbn},
+        'isbn10'        => $data->{isbn10},
+        'isbn'          => $data->{isbn13},
+        'ean13'         => $data->{isbn13},
         'author'        => $data->{author},
         'title'         => $data->{title},
-        'book_link'     => $code,
+		'book_link'		=> $mech->uri(),
         'image_link'    => $data->{image_link},
-        'thumb_link'    => $data->{thumb_link},
+        'thumb_link'    => $data->{image_link},
         'publisher'     => $data->{publisher},
         'pubdate'       => $data->{pubdate},
+		'binding'	    => $data->{binding},
+		'pages'		    => $data->{pages},
+		'weight'		=> $data->{weight},
+		'width'		    => $data->{width},
+		'height'		=> $data->{height}
     };
     $self->book($bk);
     $self->found(1);
     return $self->book;
 }
 
+#qw{currently reading: The Testament by John Grisham};
+
 1;
+
 __END__
 
 =head1 REQUIRES
@@ -180,13 +173,24 @@ Requires the following modules be installed:
 
 L<WWW::Scraper::ISBN::Driver>,
 L<WWW::Mechanize>,
-L<Template::Extract>
 
 =head1 SEE ALSO
 
 L<WWW::Scraper::ISBN>,
 L<WWW::Scraper::ISBN::Record>,
 L<WWW::Scraper::ISBN::Driver>
+
+=head1 BUGS, PATCHES & FIXES
+
+There are no known bugs at the time of this release. However, if you spot a
+bug or are experiencing difficulties that are not explained within the POD
+documentation, please send an email to barbie@cpan.org or submit a bug to the
+RT system (http://rt.cpan.org/Public/Dist/Display.html?Name=WWW-Scraper-ISBN-Yahoo_Driver).
+However, it would help greatly if you are able to pinpoint problems or even
+supply a patch.
+
+Fixes are dependant upon their severity and my availablity. Should a fix not
+be forthcoming, please feel free to (politely) remind me.
 
 =head1 AUTHOR
 
@@ -195,13 +199,9 @@ L<WWW::Scraper::ISBN::Driver>
 
 =head1 COPYRIGHT & LICENSE
 
-  Copyright (C) 2004-2007 Barbie for Miss Barbell Productions
+  Copyright (C) 2004-2010 Barbie for Miss Barbell Productions
 
   This module is free software; you can redistribute it and/or
-  modify it under the same terms as Perl itself.
-
-The full text of the licenses can be found in the F<Artistic> file included
-with this module, or in L<perlartistic> as part of Perl installation, in
-the 5.8.1 release or later.
+  modify it under the Artistic Licence v2.
 
 =cut

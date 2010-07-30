@@ -1,54 +1,62 @@
-Revision history for Perl extension WWW::Scraper::ISBN::Yahoo_Driver.
+Revision history for Perl extension WWW-Scraper-ISBN-Yahoo_Driver.
 
-0.10	17/08/2009
-	- bugfix to number of tests in skip.
+0.11    30/07/2010
+        - updates to parser for Yahoo Book site.
+        - added fields (if known) for binding, pages, weight, width & height.
+        - added ean13, which is the industry name for isbn-13.
+        - more tests.
+        - removal of Template::Extract in favour of plain regexes.
+        - various package file changes (inc adding META.json).
 
-0.09	15/08/2009
-	- minor fixes to parsing of Yahoo Books website.
-	- added ping tests, to avoid failing when no network connection.
-	- real failures produce diagnostics not skips now.
-	- added more package tests.
+0.10    17/08/2009
+        - bugfix to number of tests in skip.
 
-0.08	17/11/2008
-	- updated pattern recognition due to page layout changing
+0.09    15/08/2009
+        - minor fixes to parsing of Yahoo Books website.
+        - added ping tests, to avoid failing when no network connection.
+        - real failures produce diagnostics not skips now.
+        - added more package tests.
 
-0.07	27/06/2008
-	- added checks to only run extra tests under AUTOMATED_TESTING
-	- switched metatest to use Test-CPAN-Meta
-	- upped META.ym spec version and link
-	- added isbn10 key into book data
-	- fixed missing isbn13 from tests
-	- amended tests to search for ISBN10 and ISBN13 values
+0.08    17/11/2008
+        - updated pattern recognition due to page layout changing
+
+0.07    27/06/2008
+        - added checks to only run extra tests under AUTOMATED_TESTING
+        - switched metatest to use Test-CPAN-Meta
+        - upped META.ym spec version and link
+        - added isbn10 key into book data
+        - fixed missing isbn13 from tests
+        - amended tests to search for ISBN10 and ISBN13 values
 
 0.06    26/07/2007
-	- Updated README.
-	- Corrected Copyright dates in LICENSE file.
-	- Updated POD.
-	- Added better error reporting.
-	- added isbn13 support
-	- updated pattern recognition due to page layout changing
+        - Updated README.
+        - Corrected Copyright dates in LICENSE file.
+        - Updated POD.
+        - Added better error reporting.
+        - added isbn13 support
+        - updated pattern recognition due to page layout changing
 
 0.05    01/03/2007
-	- Handwritten META.yml to conform to current specs.
-	- Changed all instances of LICENCE to LICENSE.
-	- Added META.yml test script.
-	- Added LICENSE and Artistic files.
-	- Added an examples directory. Nothing in it yet, except a request
-	  for interesting scripts.
-	- POD updates
-	- Updated the pattern matching code now that Yahoo have changed their 
-	  page layouts
-	- Devel::Cover = 91.9%
+        - Handwritten META.yml to conform to current specs.
+        - Changed all instances of LICENCE to LICENSE.
+        - Added META.yml test script.
+        - Added LICENSE and Artistic files.
+        - Added an examples directory. Nothing in it yet, except a request
+          for interesting scripts.
+        - POD updates
+        - Updated the pattern matching code now that Yahoo have changed their 
+          page layouts
+        - Devel::Cover = 91.9%
 
-0.04	07/01/2001  
-	- handler() moved to WWW::Scraper::ISBN::Driver
-	- test suite updated to peform skips if can't access web pages
+0.04    07/01/2001  
+        - handler() moved to WWW::Scraper::ISBN::Driver
+        - test suite updated to peform skips if can't access web pages
 
-0.03	31/08/2004
-	- Simplified error handling
+0.03    31/08/2004
+        - Simplified error handling
 
-0.02	19/04/2004
-	- Test::More added as a prerequisites for PPMs
+0.02    19/04/2004
+        - Test::More added as a prerequisites for PPMs
 
-0.01	10/04/2004
-	- original version
+0.01    10/04/2004
+        - original version
