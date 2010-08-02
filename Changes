@@ -1,5 +1,9 @@
 Revision history for Perl extension WWW-Scraper-ISBN-Yahoo_Driver.
 
+0.12    02/08/2010
+        - added connection protection if client or server offline.
+        - documentation updates.
+
 0.11    30/07/2010
         - updates to parser for Yahoo Book site.
         - added fields (if known) for binding, pages, weight, width & height.

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA);
-$VERSION = '0.11';
+$VERSION = '0.12';
 
 #--------------------------------------------------------------------------
 
@@ -25,15 +25,18 @@ Searches for book information from the Yahoo Books online catalog.
 #--------------------------------------------------------------------------
 
 ###########################################################################
-#Library Modules                                                          #
+# Inheritence
+
+use base qw(WWW::Scraper::ISBN::Driver);
+
 ###########################################################################
+# Modules
 
 use WWW::Scraper::ISBN::Driver;
 use WWW::Mechanize;
 
 ###########################################################################
-#Constants                                                                #
-###########################################################################
+# Constants
 
 use constant    YAHOO   => 'http://books.yahoo.com';
 use constant    SEARCH  => 'http://search.shopping.yahoo.com/search?p=';
@@ -41,14 +44,7 @@ use constant    SEARCH  => 'http://search.shopping.yahoo.com/search?p=';
 #--------------------------------------------------------------------------
 
 ###########################################################################
-#Inheritence                                                              #
-###########################################################################
-
-@ISA = qw(WWW::Scraper::ISBN::Driver);
-
-###########################################################################
-#Interface Functions                                                      #
-###########################################################################
+# Public Interface
 
 =head1 METHODS
 
@@ -66,7 +62,7 @@ a valid page is returned, the following fields are returned via the book hash:
   isbn          (now returns isbn13)
   isbn10        (no longer provided by Yahoo on page)
   isbn13
-  ean13
+  ean13         (industry name)
   title
   author
   pubdate       (no longer provided by Yahoo on page)
@@ -96,31 +92,30 @@ sub search {
     my $mech = WWW::Mechanize->new;
     $mech->agent_alias( 'Linux Mozilla' );
 
-    $mech->get( YAHOO );
+    eval { $mech->get( YAHOO ) };
     return $self->handler("Yahoo! book website appears to be unavailable.")
-        unless($mech->success());
+	    unless($@ || $mech->success());
 
-    my $search = SEARCH . $isbn;
+	eval { $mech->get( SEARCH . $isbn ) };
+    return $self->handler("Yahoo! book search website appears to be unavailable.")
+	    unless($@ || $mech->success());
 
-    $mech->get( $search );
-    return $self->handler("Failed to find that book on Yahoo! book website.")
-        unless($mech->success());
 
     # The Results page
     my $content = $mech->content();
     #print STDERR "\n# content1=[\n$content\n]\n";
     ($data->{book_link},$data->{title},$data->{binding},$data->{author},$data->{pubdate}) 
                                         = $content =~ m!<h2 class="title"><a href="([^"]+)">([^<]+) <em>\((\w+)\)</em></a></h2>Author: ([^<]+)<br/>Published: ([^<]+)<br/>!is;
-    return $self->handler("Could not extract data from Yahoo! Books result page. [$search]")
+    return $self->handler("Failed to find that book on Yahoo! book website.")
         unless(defined $data->{book_link});
 
     my $uri = $mech->uri();
     $uri =~ s!^(https?://[^/]+).*!$1!;
     my $link = $uri . $data->{book_link};
 
-    $mech->get( $link );
+    eval { $mech->get( $link ) };
     return $self->handler("Could not extract data from Yahoo! Books book page. [$link]")
-        unless($mech->success());
+	    unless($@ || $mech->success());
 
 
 	# The Book page
@@ -161,9 +156,7 @@ sub search {
     return $self->book;
 }
 
-#qw{currently reading: The Testament by John Grisham};
-
-1;
+q{currently reading: The Testament by John Grisham};
 
 __END__
 
