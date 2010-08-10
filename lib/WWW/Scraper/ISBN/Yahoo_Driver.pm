@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA);
-$VERSION = '0.12';
+$VERSION = '0.13';
 
 #--------------------------------------------------------------------------
 
@@ -94,11 +94,11 @@ sub search {
 
     eval { $mech->get( YAHOO ) };
     return $self->handler("Yahoo! book website appears to be unavailable.")
-	    unless($@ || $mech->success());
+	    if($@ || !$mech->success() || !$mech->content());
 
 	eval { $mech->get( SEARCH . $isbn ) };
     return $self->handler("Yahoo! book search website appears to be unavailable.")
-	    unless($@ || $mech->success());
+	    if($@ || !$mech->success() || !$mech->content());
 
 
     # The Results page
@@ -114,8 +114,8 @@ sub search {
     my $link = $uri . $data->{book_link};
 
     eval { $mech->get( $link ) };
-    return $self->handler("Could not extract data from Yahoo! Books book page. [$link]")
-	    unless($@ || $mech->success());
+    return $self->handler("Yahoo! book website appears to be unavailable.")
+	    if($@ || !$mech->success() || !$mech->content());
 
 
 	# The Book page
@@ -132,6 +132,12 @@ sub search {
     ($data->{image_link})               = $html =~ m!<img id="shimgproductmain".*?src="([^"]+)"!s;
     ($data->{title},$data->{author},$data->{binding})    
                                         = $html =~ m!<h1><strong class="title"><span property="dc:title">(.*) - ([^<]+)</span></strong> <em>\((\w+)\)</em></h1>!;
+
+	return $self->handler("Could not extract data from Yahoo! result page.")
+		unless(defined $data);
+
+	# trim top and tail
+	foreach (keys %$data) { next unless(defined $data->{$_});$data->{$_} =~ s/^\s+//;$data->{$_} =~ s/\s+$//; }
 
     my $bk = {
         'isbn13'        => $data->{isbn13},
