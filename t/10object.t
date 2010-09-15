@@ -7,86 +7,86 @@ use WWW::Scraper::ISBN;
 
 ###########################################################
 
-my $CHECK_DOMAIN = 'www.google.com';
+my $DRIVER          = 'Yahoo';
+my $CHECK_DOMAIN    = 'www.google.com';
+
+my %tests = (
+    '0307474275' => [
+        [ 'is',     'isbn',         '9780307474278'     ],
+        [ 'is',     'isbn10',       '0307474275'        ],
+        [ 'is',     'isbn13',       '9780307474278'     ],
+        [ 'is',     'ean13',        '9780307474278'     ],
+        [ 'is',     'title',        'The DaVinci Code'  ],
+        [ 'is',     'author',       'Dan Brown'         ],
+        [ 'is',     'publisher',    undef               ],
+        [ 'is',     'pubdate',      'March 2009'        ],
+        [ 'is',     'binding',      'Paperback'         ],
+        [ 'is',     'pages',        '597'               ],
+        [ 'is',     'width',        undef               ],
+        [ 'is',     'height',       undef               ],
+        [ 'is',     'weight',       undef               ],
+        [ 'like',   'image_link',   qr!9780307474278!   ],
+        [ 'like',   'thumb_link',   qr!9780307474278!   ],
+        [ 'like',   'book_link',    qr|the-davinci-code|]
+    ],
+    '9780596001735' => [
+        [ 'is',     'isbn',         '9780596001735'     ],
+        [ 'is',     'isbn10',       undef               ],
+        [ 'is',     'isbn13',       '9780596001735'     ],
+        [ 'is',     'ean13',        '9780596001735'     ],
+        [ 'is',     'title',        'Perl Best Practices'   ],
+        [ 'is',     'author',       'Damian Conway'     ],
+        [ 'is',     'publisher',    undef               ],
+        [ 'is',     'pubdate',      'August 2005'       ],
+        [ 'is',     'binding',      'Paperback'         ],
+        [ 'is',     'pages',        517                 ],
+        [ 'is',     'width',        undef               ],
+        [ 'is',     'height',       undef               ],
+        [ 'is',     'weight',       undef               ],
+        [ 'like',   'image_link',   qr!9780596001735!   ],
+        [ 'like',   'thumb_link',   qr!9780596001735!   ],
+        [ 'like',   'book_link',    qr|perl-best-practices| ]
+    ],
+);
+
+my $tests = 0;
+for my $isbn (keys %tests) { $tests += scalar( @{ $tests{$isbn} } ) }
+
+
+###########################################################
 
 my $scraper = WWW::Scraper::ISBN->new();
 isa_ok($scraper,'WWW::Scraper::ISBN');
 
 SKIP: {
-	skip "Can't see a network connection", 36   if(pingtest($CHECK_DOMAIN));
+	skip "Can't see a network connection", $tests+1   if(pingtest($CHECK_DOMAIN));
 
-	$scraper->drivers("Yahoo");
+	$scraper->drivers($DRIVER);
 
-    ## Extract with an ISBN 10 value
+    for my $isbn (keys %tests) {
+        my $record = $scraper->search($isbn);
+        my $error  = $record->error || '';
 
-	my $isbn   = '0307474275';
-	my $record = $scraper->search($isbn);
-    my $error  = $record->error || '';
+        SKIP: {
+            skip "Website unavailable", scalar(@{ $tests{$isbn} }) + 2   
+                if($error =~ /website appears to be unavailable/);
 
-    SKIP: {
-        skip "Website unavailable", 18   if($error =~ /website appears to be unavailable/);
+            unless($record->found) {
+                diag($record->error);
+            }
 
-        unless($record->found) {
-            diag($record->error);
-        } else {
             is($record->found,1);
-            is($record->found_in,'Yahoo');
+            is($record->found_in,$DRIVER);
 
             my $book = $record->book;
-            is($book->{'isbn'},         '9780307474278'         ,'.. isbn found');
-            is($book->{'isbn10'},       $isbn                   ,'.. isbn10 found');
-            is($book->{'isbn13'},       '9780307474278'         ,'.. isbn13 found');
-            is($book->{'ean13'},        '9780307474278'         ,'.. ean13 found');
-            is($book->{'title'},        'The DaVinci Code'      ,'.. title found');
-            is($book->{'author'},       'Dan Brown'             ,'.. author found');
-            is($book->{'pubdate'},      'March 2009'            ,'.. pubdate found');
-            is($book->{'publisher'},    undef                   ,'.. publisher found'); # no longer provided
-            like($book->{'image_link'}, qr!9780307474278!);
-            like($book->{'thumb_link'}, qr!9780307474278!);
-            like($book->{'book_link'},  qr!the-davinci-code!i);
-            is($book->{'binding'},      'Paperback'             ,'.. binding found');
-            is($book->{'pages'},        597                     ,'.. pages found');
-            is($book->{'width'},        undef                   ,'.. width found');
-            is($book->{'height'},       undef                   ,'.. height found');
-            is($book->{'weight'},       undef                   ,'.. weight found');
+            for my $test (@{ $tests{$isbn} }) {
+                if($test->[0] eq 'ok')          { ok(       $book->{$test->[1]},             ".. '$test->[1]' found [$isbn]"); } 
+                elsif($test->[0] eq 'is')       { is(       $book->{$test->[1]}, $test->[2], ".. '$test->[1]' found [$isbn]"); } 
+                elsif($test->[0] eq 'isnt')     { isnt(     $book->{$test->[1]}, $test->[2], ".. '$test->[1]' found [$isbn]"); } 
+                elsif($test->[0] eq 'like')     { like(     $book->{$test->[1]}, $test->[2], ".. '$test->[1]' found [$isbn]"); } 
+                elsif($test->[0] eq 'unlike')   { unlike(   $book->{$test->[1]}, $test->[2], ".. '$test->[1]' found [$isbn]"); }
 
-            #use Data::Dumper;
-            #diag("book=[".Dumper($book)."]");
-        }
-    }
-
-    ## Extract with an ISBN 13 value
-
-    $isbn   = '9780596001735';
-	$record = $scraper->search($isbn);
-    $error  = $record->error || '';
-
-    SKIP: {
-        skip "Website unavailable", 18   if($error =~ /website appears to be unavailable/);
-
-        unless($record->found) {
-            diag($record->error);
-        } else {
-            is($record->found,1);
-            is($record->found_in,'Yahoo');
-
-            my $book = $record->book;
-            is($book->{'isbn'},         $isbn                   ,'.. isbn found');
-            is($book->{'isbn10'},       undef                   ,'.. isbn10 found');    # not provided by default
-            is($book->{'isbn13'},       '9780596001735'         ,'.. isbn13 found');
-            is($book->{'ean13'},        '9780596001735'         ,'.. ean13 found');
-            is($book->{'title'},        'Perl Best Practices'   ,'.. title found');
-            is($book->{'author'},       'Damian Conway'         ,'.. author found');
-            is($book->{'pubdate'},      'August 2005'           ,'.. pubdate found');
-            is($book->{'publisher'},    undef                   ,'.. publisher found'); # no longer provided
-            like($book->{'image_link'}, qr!9780596001735!);
-            like($book->{'thumb_link'}, qr!9780596001735!);
-            like($book->{'book_link'},  qr!perl-best-practices!i);
-            is($book->{'binding'},      'Paperback'             ,'.. binding found');
-            is($book->{'pages'},        517                     ,'.. pages found');
-            is($book->{'width'},        undef                   ,'.. width found');
-            is($book->{'height'},       undef                   ,'.. height found');
-            is($book->{'weight'},       undef                   ,'.. weight found');
+            }
 
             #use Data::Dumper;
             #diag("book=[".Dumper($book)."]");
