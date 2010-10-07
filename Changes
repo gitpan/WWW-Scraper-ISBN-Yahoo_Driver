@@ -1,5 +1,8 @@
 Revision history for Perl extension WWW-Scraper-ISBN-Yahoo_Driver.
 
+0.16    07/10/2010
+        - amended pingtest() in network tests.
+
 0.15    06/10/2010
         - fixed skip count.
         - provided alternate ping test methods.
