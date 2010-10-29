@@ -59,7 +59,7 @@ my $scraper = WWW::Scraper::ISBN->new();
 isa_ok($scraper,'WWW::Scraper::ISBN');
 
 SKIP: {
-	skip "Can't see a network connection", $tests+1   if(pingtest($CHECK_DOMAIN));
+	skip "Can't see a network connection", $tests   if(pingtest($CHECK_DOMAIN));
 
 	$scraper->drivers($DRIVER);
 
@@ -70,6 +70,8 @@ SKIP: {
         SKIP: {
             skip "Website unavailable", scalar(@{ $tests{$isbn} }) + 2   
                 if($error =~ /website appears to be unavailable/);
+            skip "Book unavailable", scalar(@{ $tests{$isbn} }) + 2   
+                if($error =~ /Failed to find that book/);
 
             unless($record->found) {
                 diag($record->error);
