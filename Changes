@@ -1,5 +1,8 @@
 Revision history for Perl extension WWW-Scraper-ISBN-Yahoo_Driver.
 
+0.18    01/03/2011
+        - upgraded to Test::CPAN::Meta::JSON for tests.
+
 0.17    29/10/2010
         - added further skip test if test books are withdrawn from the site.
         - fixed skip test count.

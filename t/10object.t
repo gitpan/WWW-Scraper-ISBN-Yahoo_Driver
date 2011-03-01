@@ -71,7 +71,7 @@ SKIP: {
             skip "Website unavailable", scalar(@{ $tests{$isbn} }) + 2   
                 if($error =~ /website appears to be unavailable/);
             skip "Book unavailable", scalar(@{ $tests{$isbn} }) + 2   
-                if($error =~ /Failed to find that book/);
+                if($error =~ /Failed to find that book/ || !$record->found);
 
             unless($record->found) {
                 diag($record->error);
