@@ -1,5 +1,11 @@
 Revision history for Perl extension WWW-Scraper-ISBN-Yahoo_Driver.
 
+0.19    27/05/2012
+	- spelling fixes. (thanks to Florian Schlichting & Gregor Herrmann).
+	- META tests no longer require specific versions.
+	- added minimum perl version (5.006).
+        - reworked Makefile.PL for clarity.
+
 0.18    01/03/2011
         - upgraded to Test::CPAN::Meta::JSON for tests.
 
