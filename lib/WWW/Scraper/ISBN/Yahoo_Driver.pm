@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA);
-$VERSION = '0.19';
+$VERSION = '0.20';
 
 #--------------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ use WWW::Mechanize;
 ###########################################################################
 # Constants
 
-use constant    YAHOO   => 'http://books.yahoo.com';
+use constant    YAHOO   => 'http://shopping.yahoo.com';
 use constant    SEARCH  => 'http://search.shopping.yahoo.com/search?p=';
 
 #--------------------------------------------------------------------------
@@ -66,19 +66,18 @@ a valid page is returned, the following fields are returned via the book hash:
   title
   author
   pubdate       (no longer provided by Yahoo on page)
-  publisher     (no longer provided by Yahoo on page)
+  publisher     
   book_link
   image_link
   thumb_link    (same as image_link)
+  description
   binding       (if known)
-  pages         (if known)
-  weight        (if known) (in grammes)
-  width         (if known) (in millimetres)
-  height        (if known) (in millimetres)
+  pages         (no longer provided by Yahoo on page)
+  weight        (no longer provided by Yahoo on page)
+  width         (no longer provided by Yahoo on page)
+  height        (no longer provided by Yahoo on page)
 
 The book_link and image_link refer back to the Yahoo Books website.
-
-=back
 
 =cut
 
@@ -89,10 +88,17 @@ sub search {
     $self->book(undef);
     my $data = {};
 
+    # validate and convert into EAN13 format
+    my $ean = $self->convert_to_ean13($isbn);
+    return $self->handler("Invalid ISBN specified [$isbn]")   
+        if(!$ean || (length $isbn == 13 && $isbn ne $ean)
+                 || (length $isbn == 10 && $isbn ne $self->convert_to_isbn10($ean)));
+    $isbn = $ean;
+
     my $mech = WWW::Mechanize->new;
     $mech->agent_alias( 'Linux Mozilla' );
 
-    eval { $mech->get( YAHOO ) };
+    eval { $mech->get( YAHOO . '/books' ) };
     return $self->handler("Yahoo! book website appears to be unavailable.")
 	    if($@ || !$mech->success() || !$mech->content());
 
@@ -103,35 +109,36 @@ sub search {
 
     # The Results page
     my $content = $mech->content();
-    #print STDERR "\n# content1=[\n$content\n]\n";
-    ($data->{book_link},$data->{title},$data->{binding},$data->{author},$data->{pubdate}) 
-                                        = $content =~ m!<h2 class="title"><a href="([^"]+)">([^<]+) <em>\((\w+)\)</em></a></h2>Author: ([^<]+)<br/>Published: ([^<]+)<br/>!is;
+    #print STDERR "\n# results=[\n$content\n]\n";
+
+    my ($list) = $content =~ m!<ul class="hproducts">(.*?)</ul>!is;
+    my ($link,$thumb) = $list =~ m!<li[^>]+><div class="img"><a href="([^"]+)"[^>]+><img src="([^"]+)"!is;
+
+    #print STDERR "\n# link=[$link],  thumb=[$thumb], list=[$list]\n";
+
     return $self->handler("Failed to find that book on Yahoo! book website.")
-        unless(defined $data->{book_link});
+        unless(defined $link);
 
-    my $uri = $mech->uri();
-    $uri =~ s!^(https?://[^/]+).*!$1!;
-    my $link = $uri . $data->{book_link};
+    $data->{book_link} = YAHOO . $link;
 
-    eval { $mech->get( $link ) };
-    return $self->handler("Yahoo! book website appears to be unavailable.")
+	eval { $mech->get( $data->{book_link} ) };
+    return $self->handler("Yahoo! book search website appears to be unavailable.")
 	    if($@ || !$mech->success() || !$mech->content());
 
 
 	# The Book page
     my $html = $mech->content();
+    #print STDERR "\n# page=[\n$html\n]\n";
 
-    #print STDERR "\n#$html";
-
-    ($data->{pages})                    = $html =~ m!<em>Number of Pages</em></td><td>(\d+)</td>!s;
-    ($data->{weight})                   = $html =~ m!<li><b>Shipping Weight:</b>\s*([\d.]+)\s*ounces</li>!s;
-    ($data->{height},$data->{width})    = $html =~ m!<li><b>\s*Product Dimensions:\s*</b>\s*([\d.]+) x ([\d.]+) x ([\d.]+) inches\s*</li>!s;
-    ($data->{isbn13})                   = $html =~ m!http://shopping.yahoo.com/(97[89]\d+)!s;
-    ($data->{isbn10})                   = $isbn if(length($isbn) == 10);
-    ($data->{publisher})                = (undef);
-    ($data->{image_link})               = $html =~ m!<img id="shimgproductmain".*?src="([^"]+)"!s;
-    ($data->{title},$data->{author},$data->{binding})    
-                                        = $html =~ m!<h1><strong class="title"><span property="dc:title">(.*) - ([^<]+)</span></strong> <em>\((\w+)\)</em></h1>!;
+    $data->{thumb_link}     = $thumb;
+    ($data->{image_link})   = $html =~ m!<meta property="og:image" content="([^"]+)"/>!is;
+    ($data->{title})        = $html =~ m!<meta property="og:title" content="([^"]+)"/>!is;
+    ($data->{description})  = $html =~ m!<div class="exp-hide"><span itemprop="description">(.*?)</span></div>!is;
+    ($data->{publisher})    = $html =~ m!<td class="label"><em>Publisher</em></td><td>([^<]+)</td>!is;
+    ($data->{binding})      = $html =~ m!<td class="label"><em>Book Format</em></td><td>([^<]+)</td>!is;
+    ($data->{author})       = $html =~ m!<td class="label"><em>Author</em></td><td>([^<]+)</td>!is;
+    ($data->{isbn13})       = $html =~ m!http://shopping.yahoo.com/(97[89]\d+)!s;
+    ($data->{isbn10})       = $self->convert_to_isbn10($ean);
 
 	return $self->handler("Could not extract data from Yahoo! result page.")
 		unless(defined $data);
@@ -146,20 +153,96 @@ sub search {
         'ean13'         => $data->{isbn13},
         'author'        => $data->{author},
         'title'         => $data->{title},
-		'book_link'		=> $mech->uri(),
+		'book_link'		=> $data->{book_link},
         'image_link'    => $data->{image_link},
         'thumb_link'    => $data->{image_link},
+		'description'	=> $data->{description},
         'publisher'     => $data->{publisher},
         'pubdate'       => $data->{pubdate},
 		'binding'	    => $data->{binding},
 		'pages'		    => $data->{pages},
 		'weight'		=> $data->{weight},
 		'width'		    => $data->{width},
-		'height'		=> $data->{height}
+		'height'		=> $data->{height},
+		'depth'		    => $data->{depth},
+        'html'          => $html
     };
     $self->book($bk);
     $self->found(1);
     return $self->book;
+}
+
+=item C<convert_to_ean13()>
+
+Given a 10/13 character ISBN, this function will return the correct 13 digit
+ISBN, also known as EAN13.
+
+=item C<convert_to_isbn10()>
+
+Given a 10/13 character ISBN, this function will return the correct 10 digit 
+ISBN.
+
+=back
+
+=cut
+
+sub convert_to_ean13 {
+	my $self = shift;
+    my $isbn = shift;
+    my $prefix;
+
+    return  unless(length $isbn == 10 || length $isbn == 13);
+
+    if(length $isbn == 13) {
+        return  if($isbn !~ /^(978|979)(\d{10})$/);
+        ($prefix,$isbn) = ($1,$2);
+    } else {
+        return  if($isbn !~ /^(\d{10}|\d{9}X)$/);
+        $prefix = '978';
+    }
+
+    my $isbn13 = '978' . $isbn;
+    chop($isbn13);
+    my @isbn = split(//,$isbn13);
+    my ($lsum,$hsum) = (0,0);
+    while(@isbn) {
+        $hsum += shift @isbn;
+        $lsum += shift @isbn;
+    }
+
+    my $csum = ($lsum * 3) + $hsum;
+    $csum %= 10;
+    $csum = 10 - $csum  if($csum != 0);
+
+    return $isbn13 . $csum;
+}
+
+sub convert_to_isbn10 {
+	my $self = shift;
+    my $ean  = shift;
+    my ($isbn,$isbn10);
+
+    return  unless(length $ean == 10 || length $ean == 13);
+
+    if(length $ean == 13) {
+        return  if($ean !~ /^(?:978|979)(\d{9})\d$/);
+        ($isbn,$isbn10) = ($1,$1);
+    } else {
+        return  if($ean !~ /^(\d{9})[\dX]$/);
+        ($isbn,$isbn10) = ($1,$1);
+    }
+
+	return  if($isbn < 0 or $isbn > 999999999);
+
+	my ($csum, $pos, $digit) = (0, 0, 0);
+    for ($pos = 9; $pos > 0; $pos--) {
+        $digit = $isbn % 10;
+        $isbn /= 10;             # Decimal shift ISBN for next time 
+        $csum += ($pos * $digit);
+    }
+    $csum %= 11;
+    $csum = 'X'   if ($csum == 10);
+    return $isbn10 . $csum;
 }
 
 q{currently listening to: Into Insignificance I Will Pale by Paul Menel};
@@ -198,9 +281,9 @@ be forthcoming, please feel free to (politely) remind me.
 
 =head1 COPYRIGHT & LICENSE
 
-  Copyright (C) 2004-2012 Barbie for Miss Barbell Productions
+  Copyright (C) 2004-2013 Barbie for Miss Barbell Productions
 
-  This module is free software; you can redistribute it and/or
+  This distribution is free software; you can redistribute it and/or
   modify it under the Artistic Licence v2.
 
 =cut

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 
-use lib './t';
+use Data::Dumper;
 use Test::More tests => 37;
 use WWW::Scraper::ISBN;
 
@@ -12,39 +12,39 @@ my $CHECK_DOMAIN    = 'www.google.com';
 
 my %tests = (
     '0307474275' => [
-        [ 'is',     'isbn',         '9780307474278'     ],
-        [ 'is',     'isbn10',       '0307474275'        ],
-        [ 'is',     'isbn13',       '9780307474278'     ],
-        [ 'is',     'ean13',        '9780307474278'     ],
-        [ 'is',     'title',        'The DaVinci Code'  ],
-        [ 'is',     'author',       'Dan Brown'         ],
-        [ 'is',     'publisher',    undef               ],
-        [ 'is',     'pubdate',      'March 2009'        ],
-        [ 'is',     'binding',      'Paperback'         ],
-        [ 'is',     'pages',        '597'               ],
-        [ 'is',     'width',        undef               ],
-        [ 'is',     'height',       undef               ],
-        [ 'is',     'weight',       undef               ],
-        [ 'like',   'image_link',   qr!9780307474278!   ],
-        [ 'like',   'thumb_link',   qr!9780307474278!   ],
-        [ 'like',   'book_link',    qr|the-davinci-code|]
+        [ 'is',     'isbn',         '9780307474278'         ],
+        [ 'is',     'isbn10',       '0307474275'            ],
+        [ 'is',     'isbn13',       '9780307474278'         ],
+        [ 'is',     'ean13',        '9780307474278'         ],
+        [ 'is',     'title',        'The DaVinci Code'      ],
+        [ 'is',     'author',       'Dan Brown'             ],
+        [ 'is',     'publisher',    'Anchor'                ],
+        [ 'is',     'pubdate',      undef                   ],
+        [ 'is',     'binding',      'Mass Market Paperback' ],
+        [ 'is',     'pages',        undef                   ],
+        [ 'is',     'width',        undef                   ],
+        [ 'is',     'height',       undef                   ],
+        [ 'is',     'weight',       undef                   ],
+        [ 'like',   'image_link',   qr!949701887_640!       ],
+        [ 'like',   'thumb_link',   qr!949701887_640!       ],
+        [ 'like',   'book_link',    qr|the-davinci-code|    ]
     ],
     '9780596001735' => [
-        [ 'is',     'isbn',         '9780596001735'     ],
-        [ 'is',     'isbn10',       undef               ],
-        [ 'is',     'isbn13',       '9780596001735'     ],
-        [ 'is',     'ean13',        '9780596001735'     ],
+        [ 'is',     'isbn',         '9780596001735'         ],
+        [ 'is',     'isbn10',       '0596001738'            ],
+        [ 'is',     'isbn13',       '9780596001735'         ],
+        [ 'is',     'ean13',        '9780596001735'         ],
         [ 'is',     'title',        'Perl Best Practices'   ],
-        [ 'is',     'author',       'Damian Conway'     ],
-        [ 'is',     'publisher',    undef               ],
-        [ 'is',     'pubdate',      'August 2005'       ],
-        [ 'is',     'binding',      'Paperback'         ],
-        [ 'is',     'pages',        517                 ],
-        [ 'is',     'width',        undef               ],
-        [ 'is',     'height',       undef               ],
-        [ 'is',     'weight',       undef               ],
-        [ 'like',   'image_link',   qr!9780596001735!   ],
-        [ 'like',   'thumb_link',   qr!9780596001735!   ],
+        [ 'is',     'author',       'Damian Conway'         ],
+        [ 'is',     'publisher',    q|O'Reilly Media|       ],
+        [ 'is',     'pubdate',      undef                   ],
+        [ 'is',     'binding',      'Paperback'             ],
+        [ 'is',     'pages',        undef                   ],
+        [ 'is',     'width',        undef                   ],
+        [ 'is',     'height',       undef                   ],
+        [ 'is',     'weight',       undef                   ],
+        [ 'like',   'image_link',   qr!950137797_640!       ],
+        [ 'like',   'thumb_link',   qr!950137797_640!       ],
         [ 'like',   'book_link',    qr|perl-best-practices| ]
     ],
 );
@@ -63,9 +63,11 @@ SKIP: {
 
 	$scraper->drivers($DRIVER);
 
+    my $record;
+
     for my $isbn (keys %tests) {
-        my $record = $scraper->search($isbn);
-        my $error  = $record->error || '';
+        eval { $record = $scraper->search($isbn) };
+        my $error = $@ || $record->error || '';
 
         SKIP: {
             skip "Website unavailable", scalar(@{ $tests{$isbn} }) + 2   
@@ -73,13 +75,14 @@ SKIP: {
             skip "Book unavailable", scalar(@{ $tests{$isbn} }) + 2   
                 if($error =~ /Failed to find that book/ || !$record->found);
 
-            unless($record->found) {
-                diag($record->error);
+            unless($record && $record->found) {
+                diag("error=$error, record error=".$record->error);
             }
 
             is($record->found,1);
             is($record->found_in,$DRIVER);
 
+            my $fail = 0;
             my $book = $record->book;
             diag("book=[".$book->{book_link}."]");
             for my $test (@{ $tests{$isbn} }) {
@@ -89,10 +92,10 @@ SKIP: {
                 elsif($test->[0] eq 'like')     { like(     $book->{$test->[1]}, $test->[2], ".. '$test->[1]' found [$isbn]"); } 
                 elsif($test->[0] eq 'unlike')   { unlike(   $book->{$test->[1]}, $test->[2], ".. '$test->[1]' found [$isbn]"); }
 
+                $fail = 1   unless(defined $book->{$test->[1]} || ($test->[0] ne 'ok' && !defined $test->[2]));
             }
 
-            #use Data::Dumper;
-            #diag("book=[".Dumper($book)."]");
+            diag("book=[".Dumper($book)."]")    if($fail);
         }
     }
 }

@@ -1,37 +1,46 @@
 Revision history for Perl extension WWW-Scraper-ISBN-Yahoo_Driver.
 
-0.19    27/05/2012
-	- spelling fixes. (thanks to Florian Schlichting & Gregor Herrmann).
-	- META tests no longer require specific versions.
-	- added minimum perl version (5.006).
+0.20    2013-03-17
+        - added isbn-check.pl to examples.
+        - change file dates changed to meet W3CDTF standards.
+        - META updates.
+        - more error reporting in tests.
+        - reworked regexs due to site changes.
+        - added description field.
+        - pages, weight, width and height fields no longer provided.
+
+0.19    2012-05-27
+        - spelling fixes. (thanks to Florian Schlichting & Gregor Herrmann).
+        - META tests no longer require specific versions.
+        - added minimum perl version (5.006).
         - reworked Makefile.PL for clarity.
 
-0.18    01/03/2011
+0.18    2011-03-01
         - upgraded to Test::CPAN::Meta::JSON for tests.
 
-0.17    29/10/2010
+0.17    2010-10-29
         - added further skip test if test books are withdrawn from the site.
         - fixed skip test count.
 
-0.16    07/10/2010
+0.16    2010-10-07
         - amended pingtest() in network tests.
 
-0.15    06/10/2010
+0.15    2010-10-06
         - fixed skip count.
         - provided alternate ping test methods.
 
-0.14    15/09/2010
+0.14    2010-09-15
         - reworked test structure, so easier to add sample sets.
 
-0.13    10/08/2010
+0.13    2010-08-10
         - added better protection from network failures.
         - updated prerequisite requirements.
 
-0.12    02/08/2010
+0.12    2010-08-02
         - added connection protection if client or server offline.
         - documentation updates.
 
-0.11    30/07/2010
+0.11    2010-07-30
         - updates to parser for Yahoo Book site.
         - added fields (if known) for binding, pages, weight, width & height.
         - added ean13, which is the industry name for isbn-13.
@@ -39,19 +48,19 @@ Revision history for Perl extension WWW-Scraper-ISBN-Yahoo_Driver.
         - removal of Template::Extract in favour of plain regexes.
         - various package file changes (inc adding META.json).
 
-0.10    17/08/2009
+0.10    2009-08-17
         - bugfix to number of tests in skip.
 
-0.09    15/08/2009
+0.09    2009-08-15
         - minor fixes to parsing of Yahoo Books website.
         - added ping tests, to avoid failing when no network connection.
         - real failures produce diagnostics not skips now.
         - added more package tests.
 
-0.08    17/11/2008
+0.08    2008-11-17
         - updated pattern recognition due to page layout changing
 
-0.07    27/06/2008
+0.07    2008-06-27
         - added checks to only run extra tests under AUTOMATED_TESTING
         - switched metatest to use Test-CPAN-Meta
         - upped META.ym spec version and link
@@ -59,7 +68,7 @@ Revision history for Perl extension WWW-Scraper-ISBN-Yahoo_Driver.
         - fixed missing isbn13 from tests
         - amended tests to search for ISBN10 and ISBN13 values
 
-0.06    26/07/2007
+0.06    2007-07-26
         - Updated README.
         - Corrected Copyright dates in LICENSE file.
         - Updated POD.
@@ -67,7 +76,7 @@ Revision history for Perl extension WWW-Scraper-ISBN-Yahoo_Driver.
         - added isbn13 support
         - updated pattern recognition due to page layout changing
 
-0.05    01/03/2007
+0.05    2007-03-01
         - Handwritten META.yml to conform to current specs.
         - Changed all instances of LICENCE to LICENSE.
         - Added META.yml test script.
@@ -79,15 +88,15 @@ Revision history for Perl extension WWW-Scraper-ISBN-Yahoo_Driver.
           page layouts
         - Devel::Cover = 91.9%
 
-0.04    07/01/2001  
+0.04    2001-01-07  
         - handler() moved to WWW::Scraper::ISBN::Driver
         - test suite updated to peform skips if can't access web pages
 
-0.03    31/08/2004
+0.03    2004-08-31
         - Simplified error handling
 
-0.02    19/04/2004
+0.02    2004-04-19
         - Test::More added as a prerequisites for PPMs
 
-0.01    10/04/2004
+0.01    2004-04-10
         - original version
