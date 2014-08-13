@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA);
-$VERSION = '0.20';
+$VERSION = '0.21';
 
 #--------------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ use WWW::Mechanize;
 # Constants
 
 use constant    YAHOO   => 'http://shopping.yahoo.com';
-use constant    SEARCH  => 'http://search.shopping.yahoo.com/search?p=';
+use constant    SEARCH  => 'http://shopping.yahoo.com/search?p=';
 
 #--------------------------------------------------------------------------
 
@@ -79,6 +79,8 @@ a valid page is returned, the following fields are returned via the book hash:
 
 The book_link and image_link refer back to the Yahoo Books website.
 
+=back
+
 =cut
 
 sub search {
@@ -111,8 +113,8 @@ sub search {
     my $content = $mech->content();
     #print STDERR "\n# results=[\n$content\n]\n";
 
-    my ($list) = $content =~ m!<ul class="hproducts">(.*?)</ul>!is;
-    my ($link,$thumb) = $list =~ m!<li[^>]+><div class="img"><a href="([^"]+)"[^>]+><img src="([^"]+)"!is;
+    my ($list) = $content =~ m!<ul class="hproducts[^"]*">(.*?)</ul>!is;
+    my ($link,$thumb) = $list =~ m!<li[^>]+>\s*<div class="shmod">\s*<div class="mod-content">\s*<div class="img"><a href="([^"]+)"[^>]+><img src="([^"]+)"!is;
 
     #print STDERR "\n# link=[$link],  thumb=[$thumb], list=[$list]\n";
 
@@ -130,6 +132,9 @@ sub search {
     my $html = $mech->content();
     #print STDERR "\n# page=[\n$html\n]\n";
 
+	return $self->handler("Could not extract data from Yahoo! result page.")
+		unless($html =~ m!</body>\s*</html>!);
+
     $data->{thumb_link}     = $thumb;
     ($data->{image_link})   = $html =~ m!<meta property="og:image" content="([^"]+)"/>!is;
     ($data->{title})        = $html =~ m!<meta property="og:title" content="([^"]+)"/>!is;
@@ -137,7 +142,7 @@ sub search {
     ($data->{publisher})    = $html =~ m!<td class="label"><em>Publisher</em></td><td>([^<]+)</td>!is;
     ($data->{binding})      = $html =~ m!<td class="label"><em>Book Format</em></td><td>([^<]+)</td>!is;
     ($data->{author})       = $html =~ m!<td class="label"><em>Author</em></td><td>([^<]+)</td>!is;
-    ($data->{isbn13})       = $html =~ m!http://shopping.yahoo.com/(97[89]\d+)!s;
+    ($data->{isbn13})       = $ean;
     ($data->{isbn10})       = $self->convert_to_isbn10($ean);
 
 	return $self->handler("Could not extract data from Yahoo! result page.")
@@ -172,80 +177,7 @@ sub search {
     return $self->book;
 }
 
-=item C<convert_to_ean13()>
-
-Given a 10/13 character ISBN, this function will return the correct 13 digit
-ISBN, also known as EAN13.
-
-=item C<convert_to_isbn10()>
-
-Given a 10/13 character ISBN, this function will return the correct 10 digit 
-ISBN.
-
-=back
-
-=cut
-
-sub convert_to_ean13 {
-	my $self = shift;
-    my $isbn = shift;
-    my $prefix;
-
-    return  unless(length $isbn == 10 || length $isbn == 13);
-
-    if(length $isbn == 13) {
-        return  if($isbn !~ /^(978|979)(\d{10})$/);
-        ($prefix,$isbn) = ($1,$2);
-    } else {
-        return  if($isbn !~ /^(\d{10}|\d{9}X)$/);
-        $prefix = '978';
-    }
-
-    my $isbn13 = '978' . $isbn;
-    chop($isbn13);
-    my @isbn = split(//,$isbn13);
-    my ($lsum,$hsum) = (0,0);
-    while(@isbn) {
-        $hsum += shift @isbn;
-        $lsum += shift @isbn;
-    }
-
-    my $csum = ($lsum * 3) + $hsum;
-    $csum %= 10;
-    $csum = 10 - $csum  if($csum != 0);
-
-    return $isbn13 . $csum;
-}
-
-sub convert_to_isbn10 {
-	my $self = shift;
-    my $ean  = shift;
-    my ($isbn,$isbn10);
-
-    return  unless(length $ean == 10 || length $ean == 13);
-
-    if(length $ean == 13) {
-        return  if($ean !~ /^(?:978|979)(\d{9})\d$/);
-        ($isbn,$isbn10) = ($1,$1);
-    } else {
-        return  if($ean !~ /^(\d{9})[\dX]$/);
-        ($isbn,$isbn10) = ($1,$1);
-    }
-
-	return  if($isbn < 0 or $isbn > 999999999);
-
-	my ($csum, $pos, $digit) = (0, 0, 0);
-    for ($pos = 9; $pos > 0; $pos--) {
-        $digit = $isbn % 10;
-        $isbn /= 10;             # Decimal shift ISBN for next time 
-        $csum += ($pos * $digit);
-    }
-    $csum %= 11;
-    $csum = 'X'   if ($csum == 10);
-    return $isbn10 . $csum;
-}
-
-q{currently listening to: Into Insignificance I Will Pale by Paul Menel};
+q{currently listening to: 'Drunk In Public' by The Levellers};
 
 __END__
 
@@ -281,7 +213,7 @@ be forthcoming, please feel free to (politely) remind me.
 
 =head1 COPYRIGHT & LICENSE
 
-  Copyright (C) 2004-2013 Barbie for Miss Barbell Productions
+  Copyright (C) 2004-2014 Barbie for Miss Barbell Productions
 
   This distribution is free software; you can redistribute it and/or
   modify it under the Artistic Licence v2.

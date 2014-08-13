@@ -1,4 +1,16 @@
-Revision history for Perl extension WWW-Scraper-ISBN-Yahoo_Driver.
+Revision history for WWW-Scraper-ISBN-Yahoo_Driver
+==================================================
+
+0.21    2014-08-13
+        - added git repository links to metadata.
+        - fixed distribution name in metadata.
+        - upgrade to WWW-Scraper-ISBN-1.00.
+        - conversion routines now moved to WWW::Scraper::ISBN::Driver.
+        - extended test suite.
+        - site changed, and even more temperamental than before. Considering
+          dumping the driver, as the data returned is minimal, and better
+          presented by other sites.
+        - reworked test failure checks.
 
 0.20    2013-03-17
         - added isbn-check.pl to examples.
