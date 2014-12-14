@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA);
-$VERSION = '0.21';
+$VERSION = '0.22';
 
 #--------------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ use WWW::Mechanize;
 # Constants
 
 use constant    YAHOO   => 'http://shopping.yahoo.com';
-use constant    SEARCH  => 'http://shopping.yahoo.com/search?p=';
+use constant    SEARCH  => 'https://shopping.yahoo.com/search?fr=yshoppingheader_test2&type=2button&did=0&p=';
 
 #--------------------------------------------------------------------------
 
@@ -113,15 +113,13 @@ sub search {
     my $content = $mech->content();
     #print STDERR "\n# results=[\n$content\n]\n";
 
-    my ($list) = $content =~ m!<ul class="hproducts[^"]*">(.*?)</ul>!is;
-    my ($link,$thumb) = $list =~ m!<li[^>]+>\s*<div class="shmod">\s*<div class="mod-content">\s*<div class="img"><a href="([^"]+)"[^>]+><img src="([^"]+)"!is;
-
-    #print STDERR "\n# link=[$link],  thumb=[$thumb], list=[$list]\n";
+    my ($link,$thumb) = $content =~ m!<div class="img"><a href="([^"]+)"[^>]+><img src="([^"]+)"!is;
+    #print STDERR "\n# link=[$link]\n# thumb=[$thumb]\n";
 
     return $self->handler("Failed to find that book on Yahoo! book website.")
         unless(defined $link);
 
-    $data->{book_link} = YAHOO . $link;
+    $data->{book_link} = $link;
 
 	eval { $mech->get( $data->{book_link} ) };
     return $self->handler("Yahoo! book search website appears to be unavailable.")
@@ -135,9 +133,9 @@ sub search {
 	return $self->handler("Could not extract data from Yahoo! result page.")
 		unless($html =~ m!</body>\s*</html>!);
 
-    $data->{thumb_link}     = $thumb;
-    ($data->{image_link})   = $html =~ m!<meta property="og:image" content="([^"]+)"/>!is;
-    ($data->{title})        = $html =~ m!<meta property="og:title" content="([^"]+)"/>!is;
+#    $data->{thumb_link}     = $thumb;
+#    ($data->{image_link})   = $html =~ m!<meta property="og:image" content="([^"]+)"/>!is;
+    ($data->{title})        = $html =~ m!<span id="productTitle"[^>]*>([^<]*)</span>!is;
     ($data->{description})  = $html =~ m!<div class="exp-hide"><span itemprop="description">(.*?)</span></div>!is;
     ($data->{publisher})    = $html =~ m!<td class="label"><em>Publisher</em></td><td>([^<]+)</td>!is;
     ($data->{binding})      = $html =~ m!<td class="label"><em>Book Format</em></td><td>([^<]+)</td>!is;
@@ -159,8 +157,8 @@ sub search {
         'author'        => $data->{author},
         'title'         => $data->{title},
 		'book_link'		=> $data->{book_link},
-        'image_link'    => $data->{image_link},
-        'thumb_link'    => $data->{image_link},
+        'image_link'    => $thumb,
+        'thumb_link'    => $thumb,
 		'description'	=> $data->{description},
         'publisher'     => $data->{publisher},
         'pubdate'       => $data->{pubdate},
